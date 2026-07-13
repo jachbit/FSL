@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>F.O.C.U.S.© — To-Buy List</title>
+<style>
+  :root {
+    --navy:   #002B5C;
+    --orange: #E65C00;
+    --bg:     #0d1b2e;
+    --card:   #0f2340;
+    --border: #1e3a5f;
+    --text:   #e2e8f0;
+    --muted:  #ccc;
+    --row-alt: rgba(255,255,255,0.03);
+    --danger: #dc2626;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; min-height: 100vh; }
+
+  /* Header */
+  .header { background: var(--navy); border-bottom: 3px solid var(--orange); padding: 14px 24px; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .brand { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: 0.5px; }
+  .brand sup { color: var(--orange); font-size: 12px; }
+  .hdr-subtitle { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .hdr-credit { font-size: 12px; color: var(--orange); font-weight: 700; }
+  .hdr-time { font-size: 18px; color: #fff; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .5px; margin-top: 1px; }
+  .hdr-date { font-size: 11px; color: var(--muted); }
+
+  .page { max-width: 900px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  /* Card / table */
+  .list-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+
+  table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  thead th { background: var(--navy); color: #fff; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; padding: 10px 8px; text-align: left; border-bottom: 2px solid var(--orange); white-space: nowrap; }
+  thead th.chk-col { text-align: center; width: 34px; }
+  thead th.num-col { text-align: center; width: 40px; }
+  thead th.amt-col, thead th.qty-col { width: 130px; }
+  thead th.sub-col { text-align: right; width: 100px; }
+  thead th.del-col { width: 36px; }
+
+  tbody td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: middle; }
+  tbody tr:nth-child(even) { background: var(--row-alt); }
+  tbody tr:hover { background: rgba(230,92,0,0.06); }
+  tbody tr.done-row { background: rgba(34,197,94,0.1); }
+  tbody tr.done-row:hover { background: rgba(34,197,94,0.16); }
+
+  .num { text-align: center; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+  .chk-cell { text-align: center; }
+  .done-check { width: 20px; height: 20px; cursor: pointer; accent-color: #22c55e; }
+  .done-row input, .done-row select { text-decoration: line-through; color: var(--muted); }
+  .done-row .subtotal { color: var(--muted); text-decoration: line-through; }
+
+  input[type="text"], input[type="number"], select {
+    width: 100%; background: transparent; border: 1px solid transparent; border-radius: 5px;
+    padding: 7px 8px; font-size: 14px; color: var(--text); font-family: inherit;
+  }
+  input[type="number"] { font-variant-numeric: tabular-nums; }
+  input:hover, select:hover { border-color: var(--border); }
+  input:focus, select:focus { outline: none; border-color: var(--orange); background: rgba(255,255,255,0.04); }
+  input::placeholder { color: #64748b; }
+
+  .qty-cell { display: flex; gap: 6px; }
+  .qty-cell input { width: 56px; text-align: center; flex: none; }
+  .qty-cell select { font-size: 12px; }
+  select option { color: #14213d; background: #fff; }
+
+  .subtotal { text-align: right; font-weight: 700; color: #fbbf24; font-variant-numeric: tabular-nums; padding-right: 10px; white-space: nowrap; }
+
+  .del-btn {
+    display: flex; align-items: center; justify-content: center; width: 30px; height: 30px;
+    border-radius: 6px; border: 1px solid transparent; background: transparent; color: var(--muted);
+    cursor: pointer; font-size: 17px; line-height: 1;
+  }
+  .del-btn:hover { background: rgba(220,38,38,0.15); color: var(--danger); border-color: var(--danger); }
+
+  .add-row { padding: 12px 16px; background: var(--card); }
+  .add-btn {
+    width: 100%; padding: 11px; border: 1.5px dashed var(--border); border-radius: 6px;
+    background: transparent; color: var(--orange); font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .add-btn:hover { background: rgba(230,92,0,0.1); border-style: solid; border-color: var(--orange); }
+
+  .total-bar { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: var(--navy); border-top: 2px solid var(--orange); }
+  .total-label { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: var(--orange); }
+  .total-value { font-size: 26px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; font-size: 12px; color: var(--muted); gap: 12px; flex-wrap: wrap; }
+  .toolbar-actions { display: flex; align-items: center; gap: 14px; }
+  .clear-link { background: none; border: none; color: var(--danger); font-size: 12px; font-weight: 700; cursor: pointer; padding: 4px 0; }
+  .clear-link:hover { text-decoration: underline; }
+  .pdf-btn {
+    display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1.5px solid var(--orange);
+    color: var(--orange); font-size: 12px; font-weight: 700; padding: 7px 14px; border-radius: 6px; cursor: pointer;
+  }
+  .pdf-btn:hover { background: rgba(230,92,0,0.12); }
+
+  .field-label { display: none; }
+
+  footer.site-footer { text-align: center; padding: 20px; font-size: 11px; color: var(--muted); }
+  footer.site-footer a { color: var(--orange); font-weight: 700; text-decoration: none; }
+  footer.site-footer a:hover { text-decoration: underline; }
+
+  /* Mobile: stack each row as a card */
+  @media (max-width: 640px) {
+    thead { display: none; }
+    tbody tr { display: block; padding: 12px 14px 12px 40px; position: relative; }
+    tbody td { display: block; border-bottom: none; padding: 4px 0; }
+    .chk-cell { position: absolute; top: 14px; left: 12px; }
+    .num { position: absolute; top: 12px; right: 42px; text-align: right; }
+    .del-btn { position: absolute; top: 8px; right: 8px; }
+    .field-label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 2px; }
+    .desc-cell input { font-size: 15px; border: 1px solid var(--border); }
+    .amt-cell input { border: 1px solid var(--border); text-align: right; }
+    .subtotal { padding-right: 0; }
+    .list-card { border-radius: 8px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <div class="brand">F.O.C.U.S.<sup>&copy;</sup> — To&#8209;Buy List</div>
+      <div class="hdr-subtitle">Add items, set price &amp; quantity — running total updates as you go</div>
+    </div>
+    <div class="header-right">
+      <div class="hdr-credit">Jachbit 2026</div>
+      <div class="hdr-time" id="hdrTime"></div>
+      <div class="hdr-date" id="hdrDate"></div>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="list-card">
+      <table>
+        <thead>
+          <tr>
+            <th class="chk-col"></th>
+            <th class="num-col">#</th>
+            <th>Description</th>
+            <th class="amt-col">Amount</th>
+            <th class="qty-col">How Many?</th>
+            <th class="sub-col">Sub Total</th>
+            <th class="del-col"></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="add-row">
+        <button class="add-btn" id="addBtn">&#43; Add item</button>
+      </div>
+      <div class="total-bar">
+        <div class="total-label">Total</div>
+        <div class="total-value" id="totalValue">0.00</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <span id="itemCount">0 items</span>
+      <div class="toolbar-actions">
+        <button class="pdf-btn" id="pdfBtn">&#128196; Export PDF</button>
+        <button class="clear-link" id="clearBtn">Clear all</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    &copy; 2026 Jachbit. All rights reserved. &middot; <a href="https://linktr.ee/jachbit" target="_blank" rel="noopener">linktr.ee/jachbit</a>
+  </footer>
+
+<script src="lib/jspdf.umd.min.js"></script>
+<script src="lib/jspdf.plugin.autotable.min.js"></script>
+<script>
+(function () {
+  var STORAGE_KEY = "focus-grocery-list-items";
+  var rowsEl = document.getElementById("rows");
+  var totalEl = document.getElementById("totalValue");
+  var countEl = document.getElementById("itemCount");
+
+  var items = load();
+  var nextId = items.reduce(function (m, it) { return Math.max(m, it.id); }, 0) + 1;
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return [];
+  }
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch (e) {}
+  }
+
+  function money(n) {
+    n = parseFloat(n);
+    return (isNaN(n) ? 0 : n).toFixed(2);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function option(val, current, label) {
+    return '<option value="' + val + '"' + (val === current ? " selected" : "") + '>' + label + '</option>';
+  }
+
+  function render() {
+    rowsEl.innerHTML = "";
+    var total = 0;
+    items.forEach(function (item, idx) {
+      var sub = (parseFloat(item.amount) || 0) * (parseFloat(item.qty) || 0);
+      total += sub;
+
+      var tr = document.createElement("tr");
+      if (item.done) tr.className = "done-row";
+      tr.innerHTML =
+        '<td class="chk-cell"><input type="checkbox" class="done-check" title="Mark as picked up"' + (item.done ? " checked" : "") + ' /></td>' +
+        '<td class="num">' + (idx + 1) + '</td>' +
+        '<td class="desc-cell"><span class="field-label">Description</span>' +
+          '<input type="text" data-field="desc" value="' + escapeHtml(item.desc) + '" placeholder="Item name" /></td>' +
+        '<td class="amt-cell"><span class="field-label">Amount</span>' +
+          '<input type="number" step="0.01" min="0" data-field="amount" value="' + item.amount + '" /></td>' +
+        '<td class="qty-cell-wrap"><span class="field-label">How Many?</span>' +
+          '<div class="qty-cell">' +
+            '<input type="number" min="0" step="1" data-field="qty" value="' + item.qty + '" />' +
+            '<select data-field="unit">' +
+              option("pc", item.unit, "pc/s") +
+              option("box", item.unit, "box") +
+              option("bag", item.unit, "bag") +
+            '</select>' +
+          '</div></td>' +
+        '<td class="subtotal"><span class="field-label">Sub Total</span>' + money(sub) + '</td>' +
+        '<td><button class="del-btn" title="Remove item">&times;</button></td>';
+
+      tr.querySelectorAll("[data-field]").forEach(function (el) {
+        el.addEventListener("input", function () {
+          var field = el.getAttribute("data-field");
+          var caretPos = null;
+          try { caretPos = el.selectionStart; } catch (e) {}
+          item[field] = el.value;
+          save();
+          render();
+          restoreFocus(idx, field, caretPos);
+        });
+      });
+      tr.querySelector(".del-btn").addEventListener("click", function () {
+        items = items.filter(function (it) { return it.id !== item.id; });
+        save();
+        render();
+      });
+      tr.querySelector(".done-check").addEventListener("change", function (e) {
+        item.done = e.target.checked;
+        save();
+        render();
+      });
+
+      rowsEl.appendChild(tr);
+    });
+
+    totalEl.textContent = money(total);
+    countEl.textContent = items.length + (items.length === 1 ? " item" : " items");
+  }
+
+  var focusTarget = null;
+  function restoreFocus(idx, field, pos) {
+    focusTarget = { idx: idx, field: field, pos: pos };
+    requestAnimationFrame(function () {
+      if (!focusTarget) return;
+      var row = rowsEl.children[focusTarget.idx];
+      if (row) {
+        var el = row.querySelector('[data-field="' + focusTarget.field + '"]');
+        if (el) {
+          el.focus();
+          if (focusTarget.pos !== null && focusTarget.pos !== undefined && el.setSelectionRange) {
+            try { el.setSelectionRange(focusTarget.pos, focusTarget.pos); } catch (e) {}
+          }
+        }
+      }
+      focusTarget = null;
+    });
+  }
+
+  document.getElementById("addBtn").addEventListener("click", function () {
+    items.push({ id: nextId++, desc: "", amount: 0, qty: 1, unit: "pc", done: false });
+    save();
+    render();
+  });
+
+  document.getElementById("clearBtn").addEventListener("click", function () {
+    if (items.length && !confirm("Clear the entire list?")) return;
+    items = [];
+    save();
+    render();
+  });
+
+  var UNIT_LABEL = { pc: "pc/s", box: "box", bag: "bag" };
+
+  function timestamp() {
+    var d = new Date();
+    function p(n) { return String(n).padStart(2, "0"); }
+    return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "_" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+  }
+
+  document.getElementById("pdfBtn").addEventListener("click", function () {
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      alert("Could not load the PDF library (lib/jspdf.umd.min.js). Make sure the \"lib\" folder was uploaded alongside index.html.");
+      return;
+    }
+    try {
+      buildAndSavePdf();
+    } catch (err) {
+      alert("PDF export failed: " + err.message);
+    }
+  });
+
+  function buildAndSavePdf() {
+    // Colors + layout copied from the FFTP template, matching FOCUS-TMO's
+    // /api/export/pdf (D:\ClaudeCodeProjects\FOCUS-TMO\server.py) — never rebuilt from scratch.
+    var C = {
+      navy: [0, 43, 92], darkGrey: [68, 68, 68], black: [0, 0, 0], white: [255, 255, 255],
+      lightGrey: [240, 240, 240], midGrey: [209, 209, 209], altRow: [247, 247, 247]
+    };
+    var TITLE = "F.O.C.U.S.© — To-Buy List";
+    var doc = new window.jspdf.jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+    var W = doc.internal.pageSize.getWidth();
+    var H = doc.internal.pageSize.getHeight();
+    var M = 12.7; // 36pt margin, matching the ReportLab template
+
+    function onPage() {
+      // Masthead — repeats on every page
+      doc.setTextColor.apply(doc, C.navy);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text(TITLE, M, 7);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor.apply(doc, C.darkGrey);
+      doc.text("Jachbit 2026  |  " + new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }), W - M, 7, { align: "right" });
+      doc.setDrawColor.apply(doc, C.midGrey);
+      doc.setLineWidth(0.18);
+      doc.line(M, 9, W - M, 9);
+
+      // Footer — repeats on every page
+      doc.line(M, H - 19.05, W - M, H - 19.05);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.5);
+      doc.setTextColor.apply(doc, C.darkGrey);
+      doc.text("F.O.C.U.S.©  |  Jachbit 2026  |  For personal shopping records only.", W / 2, H - 15.52, { align: "center" });
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor.apply(doc, C.navy);
+      doc.text("Page " + doc.internal.getNumberOfPages(), W - M, H - 15.52, { align: "right" });
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(6);
+      doc.setTextColor.apply(doc, C.black);
+      doc.text("John 3:16   |   1 John 3:16   |   Matt 6:33   |   Jer 33:3   |   Prov 3:5-6   |   Prov 27:17", W / 2, H - 11.64, { align: "center" });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(5.5);
+      doc.setTextColor.apply(doc, C.darkGrey);
+      doc.text("© 2026 Jachbit. All rights reserved. May not be copied or shared without express written consent of the publisher.  |  linktr.ee/jachbit", W / 2, H - 7.76, { align: "center" });
+    }
+
+    onPage();
+
+    // Big centered title block — once, above the table
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.setTextColor.apply(doc, C.navy);
+    doc.text(TITLE, W / 2, 20, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor.apply(doc, C.darkGrey);
+    doc.text(
+      "Jachbit 2026  ·  " + new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" }) + "  ·  " + items.length + (items.length === 1 ? " item" : " items"),
+      W / 2, 25, { align: "center" }
+    );
+    doc.setDrawColor.apply(doc, C.midGrey);
+    doc.setLineWidth(0.18);
+    doc.line(M, 28, W - M, 28);
+
+    var rows = items.map(function (item, idx) {
+      var sub = (parseFloat(item.amount) || 0) * (parseFloat(item.qty) || 0);
+      return [
+        item.done ? "X" : "",
+        idx + 1,
+        item.desc || "",
+        money(item.amount),
+        (item.qty || 0) + " " + (UNIT_LABEL[item.unit] || item.unit),
+        money(sub)
+      ];
+    });
+
+    doc.autoTable({
+      startY: 32,
+      head: [["Done", "#", "Description", "Amount", "How Many?", "Sub Total"]],
+      body: rows,
+      styles: { fontSize: 9, cellPadding: 3, textColor: C.black, fillColor: C.white, lineColor: C.midGrey, lineWidth: 0.2 },
+      headStyles: { fillColor: C.lightGrey, textColor: C.navy, fontStyle: "bold", halign: "center", lineColor: C.midGrey, lineWidth: 0.3 },
+      alternateRowStyles: { fillColor: C.altRow },
+      columnStyles: { 0: { halign: "center", cellWidth: 14 }, 1: { halign: "center", cellWidth: 12 }, 3: { halign: "right" }, 4: { halign: "center" }, 5: { halign: "right" } },
+      margin: { left: M, right: M, top: 32, bottom: 24 },
+      didDrawPage: onPage
+    });
+
+    var total = items.reduce(function (sum, it) { return sum + (parseFloat(it.amount) || 0) * (parseFloat(it.qty) || 0); }, 0);
+    var finalY = doc.lastAutoTable.finalY + 9;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor.apply(doc, C.navy);
+    doc.text("TOTAL:", W - 55, finalY);
+    doc.text(money(total), W - M, finalY, { align: "right" });
+
+    doc.save("FOCUS_TOBUY_LIST_" + timestamp() + ".pdf");
+  }
+
+  document.getElementById("hdrDate").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+  var hdrTimeEl = document.getElementById("hdrTime");
+  function tickClock() {
+    hdrTimeEl.textContent = new Date().toLocaleTimeString(undefined, { hour12: true });
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+
+  render();
+})();
+</script>
+</body>
+</html>
