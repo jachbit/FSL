@@ -212,80 +212,72 @@
     return '<option value="' + val + '"' + (val === current ? " selected" : "") + '>' + label + '</option>';
   }
 
-  function render() {
-    rowsEl.innerHTML = "";
-    var total = 0;
-    items.forEach(function (item, idx) {
-      var sub = (parseFloat(item.amount) || 0) * (parseFloat(item.qty) || 0);
-      total += sub;
-
-      var tr = document.createElement("tr");
-      if (item.done) tr.className = "done-row";
-      tr.innerHTML =
-        '<td class="chk-cell"><input type="checkbox" class="done-check" title="Mark as picked up"' + (item.done ? " checked" : "") + ' /></td>' +
-        '<td class="num">' + (idx + 1) + '</td>' +
-        '<td class="desc-cell"><span class="field-label">Description</span>' +
-          '<input type="text" data-field="desc" value="' + escapeHtml(item.desc) + '" placeholder="Item name" /></td>' +
-        '<td class="amt-cell"><span class="field-label">Amount</span>' +
-          '<input type="number" step="0.01" min="0" data-field="amount" value="' + item.amount + '" /></td>' +
-        '<td class="qty-cell-wrap"><span class="field-label">How Many?</span>' +
-          '<div class="qty-cell">' +
-            '<input type="number" min="0" step="1" data-field="qty" value="' + item.qty + '" />' +
-            '<select data-field="unit">' +
-              option("pc", item.unit, "pc/s") +
-              option("box", item.unit, "box") +
-              option("bag", item.unit, "bag") +
-            '</select>' +
-          '</div></td>' +
-        '<td class="subtotal"><span class="field-label">Sub Total</span>' + money(sub) + '</td>' +
-        '<td><button class="del-btn" title="Remove item">&times;</button></td>';
-
-      tr.querySelectorAll("[data-field]").forEach(function (el) {
-        el.addEventListener("input", function () {
-          var field = el.getAttribute("data-field");
-          var caretPos = null;
-          try { caretPos = el.selectionStart; } catch (e) {}
-          item[field] = el.value;
-          save();
-          render();
-          restoreFocus(idx, field, caretPos);
-        });
-      });
-      tr.querySelector(".del-btn").addEventListener("click", function () {
-        items = items.filter(function (it) { return it.id !== item.id; });
-        save();
-        render();
-      });
-      tr.querySelector(".done-check").addEventListener("change", function (e) {
-        item.done = e.target.checked;
-        save();
-        render();
-      });
-
-      rowsEl.appendChild(tr);
-    });
-
-    totalEl.textContent = money(total);
-    countEl.textContent = items.length + (items.length === 1 ? " item" : " items");
+  function computeSub(item) {
+    return (parseFloat(item.amount) || 0) * (parseFloat(item.qty) || 0);
   }
 
-  var focusTarget = null;
-  function restoreFocus(idx, field, pos) {
-    focusTarget = { idx: idx, field: field, pos: pos };
-    requestAnimationFrame(function () {
-      if (!focusTarget) return;
-      var row = rowsEl.children[focusTarget.idx];
-      if (row) {
-        var el = row.querySelector('[data-field="' + focusTarget.field + '"]');
-        if (el) {
-          el.focus();
-          if (focusTarget.pos !== null && focusTarget.pos !== undefined && el.setSelectionRange) {
-            try { el.setSelectionRange(focusTarget.pos, focusTarget.pos); } catch (e) {}
-          }
-        }
-      }
-      focusTarget = null;
+  function updateGrandTotal() {
+    var total = items.reduce(function (sum, it) { return sum + computeSub(it); }, 0);
+    totalEl.textContent = money(total);
+  }
+
+  function buildRow(item, idx) {
+    var sub = computeSub(item);
+    var tr = document.createElement("tr");
+    if (item.done) tr.className = "done-row";
+    tr.innerHTML =
+      '<td class="chk-cell"><input type="checkbox" class="done-check" title="Mark as picked up"' + (item.done ? " checked" : "") + ' /></td>' +
+      '<td class="num">' + (idx + 1) + '</td>' +
+      '<td class="desc-cell"><span class="field-label">Description</span>' +
+        '<input type="text" data-field="desc" value="' + escapeHtml(item.desc) + '" placeholder="Item name" /></td>' +
+      '<td class="amt-cell"><span class="field-label">Amount</span>' +
+        '<input type="number" step="0.01" min="0" data-field="amount" value="' + item.amount + '" /></td>' +
+      '<td class="qty-cell-wrap"><span class="field-label">How Many?</span>' +
+        '<div class="qty-cell">' +
+          '<input type="number" min="0" step="1" data-field="qty" value="' + item.qty + '" />' +
+          '<select data-field="unit">' +
+            option("pc", item.unit, "pc/s") +
+            option("box", item.unit, "box") +
+            option("bag", item.unit, "bag") +
+          '</select>' +
+        '</div></td>' +
+      '<td class="subtotal"><span class="field-label">Sub Total</span><span class="subtotal-value">' + money(sub) + '</span></td>' +
+      '<td><button class="del-btn" title="Remove item">&times;</button></td>';
+
+    // Update in place on every keystroke — never rebuild the input elements while
+    // typing, so the browser's own caret position is never disturbed. (A prior
+    // rebuild-then-restore-caret approach broke on type="number" inputs, which
+    // don't support selectionStart/setSelectionRange in Chrome, causing digits
+    // typed into Amount/Qty to land at position 0 each time — i.e. reversed.)
+    tr.querySelectorAll("[data-field]").forEach(function (el) {
+      el.addEventListener("input", function () {
+        item[el.getAttribute("data-field")] = el.value;
+        save();
+        tr.querySelector(".subtotal-value").textContent = money(computeSub(item));
+        updateGrandTotal();
+      });
     });
+    tr.querySelector(".del-btn").addEventListener("click", function () {
+      items = items.filter(function (it) { return it.id !== item.id; });
+      save();
+      render();
+    });
+    tr.querySelector(".done-check").addEventListener("change", function (e) {
+      item.done = e.target.checked;
+      save();
+      render();
+    });
+
+    return tr;
+  }
+
+  function render() {
+    rowsEl.innerHTML = "";
+    items.forEach(function (item, idx) {
+      rowsEl.appendChild(buildRow(item, idx));
+    });
+    updateGrandTotal();
+    countEl.textContent = items.length + (items.length === 1 ? " item" : " items");
   }
 
   document.getElementById("addBtn").addEventListener("click", function () {
